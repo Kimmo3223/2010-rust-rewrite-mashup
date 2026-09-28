@@ -54,6 +54,39 @@ Skate 3/
 Both folders are saved in `.env` next to `iw4l.exe`. Delete `.env` (and
 `skate-data/`) to run the setup again.
 
+## Install and play (Linux)
+
+1. Build and set up MW2 as in [BUILD.md](BUILD.md) (`.env` with `IW4L_GAMES`).
+2. Convert your Skate 3 data. This also needs `git`, `python3` with `venv`
+   (Debian/Ubuntu: `python3-venv`) and `rustc`:
+
+   ```bash
+   scripts/setup-skate-linux.sh "/path/to/Skate 3/default.xex"
+   ```
+
+   It writes `skate-data/` and adds `IW4L_SKATE_ASSETS` to `.env`. The first
+   launch after that exports the board and rig.
+3. Plug in a controller and run `make menu` (or `make map mp_rust`), then
+   press **J**.
+
+Controllers are read straight from evdev (`/dev/input/event*`), so no Steam
+Input or SDL mapping is involved:
+
+- **Xbox pads on the kernel `xpad` driver** (USB, or the wireless adapter)
+  give values identical to XInput on Windows. This is the recommended setup.
+- **Xbox pads over Bluetooth** (xpadneo or hid-microsoft), **DualShock /
+  DualSense** and other gamepads work too; their axis ranges are rescaled
+  onto XInput's. PlayStation pads use Xbox button positions (Cross = A,
+  Circle = B), though Square and Triangle may be swapped depending on the
+  driver.
+- If no controller is found, check you can read the device: `ls -l
+  /dev/input/by-id/*event-joystick`. Most desktop distributions grant access
+  to the logged-in user automatically; otherwise add yourself to the `input`
+  group.
+- Steam with Steam Input enabled adds a virtual controller alongside the
+  real one. If skating reacts oddly or not at all, close Steam or disable
+  Steam Input for the pad.
+
 ## Controls
 
 | | |

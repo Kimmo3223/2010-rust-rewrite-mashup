@@ -1,6 +1,19 @@
-//! Windows device transport. Raw signed axes/trigger bytes reach the TU3
-//! converter without Bevy/gilrs deadzones or normalized-axis reconstruction.
+//! Device transport: XInput on Windows, evdev on Linux. Raw signed
+//! axes/trigger bytes reach the TU3 converter without Bevy/gilrs deadzones or
+//! normalized-axis reconstruction.
 use skate_core::input::xbox::XboxState;
+
+#[path = "platform_linux.rs"]
+#[cfg(all(
+    target_os = "linux",
+    any(
+        target_arch = "x86_64",
+        target_arch = "aarch64",
+        target_arch = "riscv64",
+        target_arch = "loongarch64"
+    )
+))]
+mod linux;
 
 pub(crate) struct DevicePacket {
     pub number: u32,
@@ -13,7 +26,18 @@ pub(crate) enum DeviceError {
     Disconnected,
     State(u32),
     Capabilities(u32),
-    #[cfg(not(windows))]
+    #[cfg(not(any(
+        windows,
+        all(
+            target_os = "linux",
+            any(
+                target_arch = "x86_64",
+                target_arch = "aarch64",
+                target_arch = "riscv64",
+                target_arch = "loongarch64"
+            )
+        )
+    )))]
     UnsupportedPlatform,
 }
 
@@ -137,7 +161,28 @@ pub(crate) fn poll_cached(
     assert!(index < 4);
     #[cfg(windows)]
     return windows::poll(index as u32, cache);
-    #[cfg(not(windows))]
+    #[cfg(all(
+        target_os = "linux",
+        any(
+            target_arch = "x86_64",
+            target_arch = "aarch64",
+            target_arch = "riscv64",
+            target_arch = "loongarch64"
+        )
+    ))]
+    return linux::poll(index, cache);
+    #[cfg(not(any(
+        windows,
+        all(
+            target_os = "linux",
+            any(
+                target_arch = "x86_64",
+                target_arch = "aarch64",
+                target_arch = "riscv64",
+                target_arch = "loongarch64"
+            )
+        )
+    )))]
     Err(DeviceError::UnsupportedPlatform)
 }
 

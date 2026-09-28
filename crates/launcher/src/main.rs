@@ -28,6 +28,15 @@ fn main() {
     let (mode, acceptance) =
         bootstrap::parse_cli(args.into_iter()).unwrap_or_else(|e| diag::exit_launch_error(&e));
     let games = games_root_from_env().unwrap_or_else(|e| diag::exit_launch_error(&e));
+    // On Windows the first-run setup exports the board and rig; elsewhere the
+    // converted Skate 3 data comes from `.env` (scripts/setup-skate-linux.sh),
+    // so export them here on first launch. Skating stays off if this fails.
+    #[cfg(not(windows))]
+    if let Some(skate) = std::env::var_os("IW4L_SKATE_ASSETS")
+        && let Err(error) = assets::skate_board::ensure(std::path::Path::new(&skate))
+    {
+        diag::warn!(Launch, "skate: {error}");
+    }
     bootstrap::launch(games, artifacts, mode, acceptance);
 }
 
