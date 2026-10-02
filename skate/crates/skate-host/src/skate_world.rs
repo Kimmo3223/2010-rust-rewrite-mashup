@@ -136,6 +136,17 @@ fn retail_collision_world(
     archive: &[u8],
     material: RetailContactMaterial,
 ) -> Result<BoardWorld, String> {
+    retail_collision_world_with_extra(archive, material, &[])
+}
+
+/// A `.skate` map's embedded retail collision, with `extra` triangles (one
+/// sided, counterclockwise seen from outside) added after it as one more
+/// query mesh: things placed in the map at run time.
+pub(crate) fn retail_collision_world_with_extra(
+    archive: &[u8],
+    material: RetailContactMaterial,
+    extra: &[[[f32; 3]; 3]],
+) -> Result<BoardWorld, String> {
     let mut triangles = Vec::new();
     let mut packed_surfaces = Vec::new();
     let mut meshes = Vec::new();
@@ -194,10 +205,42 @@ fn retail_collision_world(
         }
         Ok(())
     })?;
-    eprintln!(
-        "SKATE_RWCM_READY triangles={count} query_clusters={} source=embedded",
-        meshes.len()
-    );
+    let start = triangles.len();
+    for points in extra {
+        // The defaults of a unit without edge data, as above.
+        if let Some(triangle) = WorldTriangle::from_vertices(
+            points.map(|p| Vector3::new(p[0], p[1], p[2])),
+            material,
+            0,
+            0x1e1,
+            [-1.; 3],
+            0.,
+        ) {
+            triangles.push(triangle);
+            packed_surfaces.push(0);
+        }
+    }
+    if triangles.len() > start {
+        let range = start..triangles.len();
+        let bounds = Bounds::from_points(triangles[range.clone()].iter().flat_map(|t| t.triangle.vertices))
+            .ok_or("Invalid extra collision bounds")?;
+        meshes.push(QueryMesh {
+            geometry: 0,
+            rejection_flags: 0,
+            triangle_range: range,
+            local_to_world: RetailAffineTransform::IDENTITY,
+            world_to_local: RetailAffineTransform::IDENTITY,
+            local_bounds: bounds,
+            matching_group: 0,
+            pool: QueryPool::Ground,
+        });
+    }
+    if extra.is_empty() {
+        eprintln!(
+            "SKATE_RWCM_READY triangles={count} query_clusters={} source=embedded",
+            meshes.len()
+        );
+    }
     BoardWorld::with_query_metadata(
         triangles,
         QueryMetadata {
@@ -208,6 +251,11 @@ fn retail_collision_world(
         },
     )
     .map_err(str::to_owned)
+}
+
+/// The embedded retail collision archive of a map, if it has one.
+pub(crate) fn retail_archive_of(map: &SkateMap) -> Result<Option<&[u8]>, String> {
+    retail_archive(map)
 }
 
 pub(crate) fn collision_world(

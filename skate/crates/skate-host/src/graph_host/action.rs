@@ -12,6 +12,10 @@ use skate_core::graph::{
 };
 use skate_core::input::body_flip_signal;
 use skate_core::input::graph_intents::{CreateMgIntent, IntentMutation};
+/// Seconds a flip flick is remembered, and seconds into the air it may start.
+const EASY_FLIP_GESTURE_WINDOW: f32 = 0.4;
+const EASY_FLIP_TAKEOFF_WINDOW: f32 = 30.0;
+
 #[path = "action_board_adjust.rs"]
 mod board_adjust;
 use skate_data::collections::Collections;
@@ -101,8 +105,15 @@ impl ActionHost {
         host.body_flip_settings = Some(body_flip_signal::Settings {
             //82BA35E0/3790 read Globals296;8289F8F0 binds hash
             //3FC308E69AEA6385 (body_flip), independently checked in stock data.
-            gesture_window: data.float("anim_motion", "body_flip", "extend_bodyflip_gesture")?,
-            takeoff_window: data.float("anim_motion", "body_flip", "extend_takeoff_point")?,
+            // IW4L eases stock's 0.1 s flick and 0.25 s takeoff windows: a
+            // flip may start any time in the air (the air state still wants
+            // enough airtime left to land it), off cliffs as well as ramps.
+            gesture_window: data
+                .float("anim_motion", "body_flip", "extend_bodyflip_gesture")?
+                .max(EASY_FLIP_GESTURE_WINDOW),
+            takeoff_window: data
+                .float("anim_motion", "body_flip", "extend_takeoff_point")?
+                .max(EASY_FLIP_TAKEOFF_WINDOW),
         });
         host.state_parents = graph
             .binding

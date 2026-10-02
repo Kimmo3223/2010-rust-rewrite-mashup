@@ -345,6 +345,10 @@ impl GamePhysics {
     }
 
     /// The material new collision is built with.
+    pub(crate) fn grind_world(&self) -> std::sync::Arc<crate::grind_world::StaticProvider> {
+        self.grind_world.clone()
+    }
+
     pub(crate) fn floor_material(&self) -> skate_core::physics::contact::RetailContactMaterial {
         self.settings.floor_material
     }

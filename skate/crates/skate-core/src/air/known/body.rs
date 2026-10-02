@@ -37,7 +37,8 @@ pub fn calculate_body_flip_speed(
             let threshold = settings
                 .flip_start_collision_time_vs_normal_y
                 .evaluate(reckoning.landing_normal_1152[1]);
-            if state.collision_time_196 > threshold {
+            // IW4L: no landing in sight (-1) means a long drop; flip anyway.
+            if state.collision_time_196 > threshold || state.collision_time_196 < 0.0 {
                 runtime.begin_reckoning_body_flip((flags >> 7) & 1 != 0);
                 state.body_flipping_211 = true;
             }

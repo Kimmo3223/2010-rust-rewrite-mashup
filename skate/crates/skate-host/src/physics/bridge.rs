@@ -11,7 +11,17 @@ pub struct Controls {
     pub left: [i16; 2],
     pub right: [i16; 2],
 }
+/// The collision a session starts from, kept so run-time additions (blocks
+/// placed in the map) can be added to it.
+enum BaseCollision {
+    /// A `.skate` map's embedded retail archive.
+    Retail(Vec<u8>),
+    /// Plain triangles (a map's portable collision, or IW4L's).
+    Triangles(Vec<[[f32; 3]; 3]>, Vec<Vec<[f32; 3]>>),
+}
+
 pub struct Session {
+    base: BaseCollision,
     physics: GamePhysics,
     skater: SkaterRuntime,
     controls: PlayerControls,
@@ -37,13 +47,25 @@ impl Session {
         spawn: [f32; 3],
         heading: f32,
     ) -> Result<Self, String> {
+        Self::from_map(root, collision_map(triangles, rails, spawn, heading))
+    }
+    /// A session on a complete `.skate` map: its native collision (with edge
+    /// data) and authored grind splines, in the map's own coordinates.
+    pub fn from_map(root: &Path, map: SkateMap) -> Result<Self, String> {
+        native_float_mode();
         let started = std::time::Instant::now();
         eprintln!("IW4L_SKATE_LOAD begin");
         skate_data::input_config::StockGameplayConfig::load(root).map_err(|e| e.to_string())?;
         let assets = skate_data::GameAssets::load(root).map_err(|e| e.to_string())?;
         let graphs = StockGraphs::load(root, &assets)?;
-        let map = collision_map(triangles, rails, spawn, heading);
         eprintln!("IW4L_SKATE_LOAD graphs {}ms", started.elapsed().as_millis());
+        let base = match crate::skate_world::retail_archive_of(&map)? {
+            Some(archive) => BaseCollision::Retail(archive.to_vec()),
+            None => BaseCollision::Triangles(
+                map.geometry.collision.iter().map(|c| c.points).collect(),
+                map.rails.iter().map(|r| r.points.clone()).collect(),
+            ),
+        };
         let physics = GamePhysics::load_with_map(root, Some(&map))?;
         eprintln!(
             "IW4L_SKATE_LOAD physics {}ms",
@@ -52,6 +74,7 @@ impl Session {
         let skater = SkaterRuntime::load(root, &graphs, &physics, "easy")?;
         eprintln!("IW4L_SKATE_LOAD skater {}ms", started.elapsed().as_millis());
         Ok(Self {
+            base,
             physics,
             skater,
             controls: PlayerControls::load(root)?,
@@ -60,6 +83,24 @@ impl Session {
             camera: CameraRuntime::load(root)?,
             markers: crate::session_marker::Runtime::load(root)?,
         })
+    }
+    /// Rebuilds the world as the session's own collision plus `extra`
+    /// triangles (one sided, counterclockwise seen from outside), keeping its
+    /// grind rails: blocks placed in the map.
+    pub fn set_extra_collision(&mut self, extra: Vec<[[f32; 3]; 3]>) -> Result<(), String> {
+        let material = self.physics.floor_material();
+        let world = match &self.base {
+            BaseCollision::Retail(archive) => {
+                crate::skate_world::retail_collision_world_with_extra(archive, material, &extra)?
+            }
+            BaseCollision::Triangles(triangles, rails) => {
+                let mut all = triangles.clone();
+                all.extend(extra);
+                crate::skate_world::collision_world(&collision_map(all, rails.clone(), [0.; 3], 0.), material)?
+            }
+        };
+        let grind = self.physics.grind_world();
+        self.physics.install_world(world, grind)
     }
     /// A builder for collision to swap in later, usable on another thread.
     pub fn collision_builder(&self) -> CollisionBuilder {
@@ -90,6 +131,7 @@ impl Session {
     /// Reuse the complete world and animation session. The original teleport path
     /// resets physical bodies and animation state at the new MW2 position.
     pub fn activate(&mut self, spawn: [f32; 3], heading: f32) -> Result<Pose, String> {
+        native_float_mode();
         self.input = ControllerInput::default();
         self.markers.suspend();
         if self.physics.ticks == 0 {
@@ -121,6 +163,7 @@ impl Session {
         self.advance_published()
     }
     fn advance_published(&mut self) -> Result<(), String> {
+        native_float_mode();
         let published = self.input.tick_input();
         self.markers
             .advance(&self.input, &self.physics, &mut self.skater);
@@ -306,5 +349,22 @@ impl InputFrame {
             .iter()
             .find_map(|s| s.as_ref().ok().map(|s| s.state.buttons))
             .unwrap_or(0)
+    }
+}
+
+/// The Xbox 360's vector unit flushes denormal floats to zero, and the
+/// engine's rsqrt-refined lengths rely on it: a vector with a denormal
+/// squared length (an up vector that has all but settled) measures NaN
+/// otherwise. Sets flush-to-zero and denormals-are-zero on this thread.
+fn native_float_mode() {
+    #[cfg(target_arch = "x86_64")]
+    unsafe {
+        const FTZ_DAZ: u32 = 0x8040;
+        let mut csr: u32 = 0;
+        std::arch::asm!("stmxcsr [{}]", in(reg) &mut csr, options(nostack));
+        if csr & FTZ_DAZ != FTZ_DAZ {
+            csr |= FTZ_DAZ;
+            std::arch::asm!("ldmxcsr [{}]", in(reg) &csr, options(nostack));
+        }
     }
 }

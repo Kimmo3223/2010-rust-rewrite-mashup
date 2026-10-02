@@ -13,6 +13,8 @@ const HALF: f32 = f32::from_bits(0x3F00_0000); // 0x8209975C.
 const ONE: f32 = f32::from_bits(0x3F80_0000); // 0x8231A844.
 const PERFECT_FLIP_NUMERATOR: f32 = f32::from_bits(0xC0F1_463B); // 0x822F9450.
 const NEGATIVE_TWO_PI: f32 = f32::from_bits(0xC0C9_0FDB); // 0x822F9434.
+/// Seconds of air a flip is paced for when the landing is out of sight.
+pub(crate) const UNSEEN_LANDING_FLIP_TIME: f32 = 1.2;
 const HEADING_LENGTH_SQUARED_MIN: f32 = f32::from_bits(0x3DCC_CCCD); // 0x820641A8.
 
 /// `PhysState_KnownAir::InitTrajectoryInfo`, TU3 `0x82D35508`.
@@ -33,10 +35,17 @@ pub fn init_trajectory_info(
     state.collision_position_112 = runtime.selector_contact_position();
     //82D35580 reads r30+48; r30 is the complete winning result.
     state.collision_time_196 = prediction.collision_time_48;
-    state.body_flip_target_speed_204 = if mode.perfect_body_flips_28 {
-        PERFECT_FLIP_NUMERATOR / state.collision_time_196
+    // IW4L: a drop longer than the prediction horizon finds no landing (-1);
+    // flips there turn at the rate of a drop of UNSEEN_LANDING_FLIP_TIME.
+    let flip_time = if state.collision_time_196 < 0.0 {
+        UNSEEN_LANDING_FLIP_TIME
     } else {
-        (settings.flip_scalar / state.collision_time_196) * NEGATIVE_TWO_PI
+        state.collision_time_196
+    };
+    state.body_flip_target_speed_204 = if mode.perfect_body_flips_28 {
+        PERFECT_FLIP_NUMERATOR / flip_time
+    } else {
+        (settings.flip_scalar / flip_time) * NEGATIVE_TWO_PI
     };
     state.selector_vector_128 = runtime.selector_vector_2848();
 
