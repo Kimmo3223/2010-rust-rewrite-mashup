@@ -214,6 +214,15 @@ impl Session {
             }
         }
     }
+    /// The trainer's pop (ollies and grind pops) and push (top speed and push power)
+    /// multipliers: `1` is stock.
+    pub fn set_boost_tuning(&mut self, pop: f32, push: f32) {
+        let t = &mut self.physics.trainer;
+        t.pop = pop;
+        t.grind_pop = pop;
+        t.push_speed = push;
+        t.push_power = push;
+    }
     /// Scales gravity, the world's and the air trajectory's, from the next tick: `1` is stock.
     pub fn set_gravity_scale(&mut self, scale: f32) {
         let gravity = &mut self.physics.settings.step.simulation.gravity_acceleration;
