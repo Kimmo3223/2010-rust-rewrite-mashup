@@ -17,6 +17,9 @@ pub(super) struct Runtime {
     history: History,
     settings: Settings,
     measurements: i32,
+    /// Host option: after a bail, get up where the skater fell (on the floor below them) rather
+    /// than at a checkpoint from before the bail, e.g. the top of a big drop.
+    pub in_place: bool,
 }
 struct Settings {
     height: f32,
@@ -37,6 +40,7 @@ impl Runtime {
                 score: 0.,
             }),
             measurements: 0,
+            in_place: false,
             settings: Settings {
                 height: value("Hash_C0526C883AF0ECCA")?,
                 radius: value("Hash_CEB092E418A5B001")?,
@@ -55,13 +59,32 @@ impl Runtime {
 pub(super) fn request(physics: &GamePhysics, skater: &mut SkaterRuntime) -> Result<(), String> {
     let stance = skater.animation.checkpoint_stance();
     let runtime = &mut skater.respawn;
-    let candidate = runtime.history.automatic(
+    let mut candidate = runtime.history.automatic(
         stance,
         &mut Scene {
             world: &physics.world,
             settings: &runtime.settings,
         },
     )?;
+    if runtime.in_place {
+        let here = runtime.history.current_position;
+        let far = (0..3)
+            .map(|i| (candidate.transform[3][i] - here[i]).powi(2))
+            .sum::<f32>()
+            > 1.0;
+        if far {
+            if let Some(floor) = floor_below(&physics.world, here)? {
+                let mut transform = runtime.history.current_orientation;
+                transform[3] = [floor[0], floor[1] + 0.2, floor[2], here[3]];
+                candidate = Candidate {
+                    transform,
+                    stance,
+                    offboard: false,
+                    score: 0.,
+                };
+            }
+        }
+    }
     skater.animation.request_checkpoint_stance(candidate.stance);
     skater.teleport_state.reply(Checkpoint {
         transform: candidate.transform,
@@ -124,6 +147,25 @@ pub(super) fn observe(physics: &GamePhysics, skater: &mut SkaterRuntime) -> Resu
             settings: &runtime.settings,
         },
     )
+}
+
+/// The walkable floor straight below `position`, within 50 m.
+fn floor_below(world: &BoardWorld, position: [f32; 4]) -> Result<Option<[f32; 3]>, String> {
+    let mut start = position;
+    start[1] += 0.5;
+    let mut end = position;
+    end[1] -= 50.;
+    let probe = Probe {
+        start,
+        end,
+        radius: 0.,
+    };
+    Ok(contact_queries::query(world, probe, 0)?
+        .filter(|hit| hit.geometry.normal.y > 0.5)
+        .map(|hit| {
+            let p = hit.geometry.position;
+            [p.x, p.y, p.z]
+        }))
 }
 
 fn flip(matrix: &mut Matrix) {

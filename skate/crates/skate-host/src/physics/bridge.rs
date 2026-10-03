@@ -217,6 +217,10 @@ impl Session {
             }
         }
     }
+    /// After a bail, get up where the skater fell instead of at an earlier checkpoint.
+    pub fn set_respawn_in_place(&mut self, in_place: bool) {
+        self.skater.respawn.in_place = in_place;
+    }
     /// The trainer's pop (ollies and grind pops) and push (top speed and push power)
     /// multipliers: `1` is stock.
     pub fn set_boost_tuning(&mut self, pop: f32, push: f32) {
