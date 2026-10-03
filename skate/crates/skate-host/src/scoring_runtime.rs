@@ -120,6 +120,14 @@ impl Runtime {
         })
     }
 
+    /// The line in progress: its running score and latest trick, zero and empty between lines.
+    pub fn live_line(&self) -> (f32, &str) {
+        if self.sequence_active {
+            (self.sequence_score, &self.trick_name)
+        } else {
+            (0., "")
+        }
+    }
     fn penalty(&self, id: usize) -> f32 {
         let Some(d) = self.data.by_id(id) else {
             return 1.;

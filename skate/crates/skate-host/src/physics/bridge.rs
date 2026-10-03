@@ -44,6 +44,9 @@ pub struct Pose {
     pub landed_lines: u32,
     pub landed_points: f64,
     pub landed_trick: String,
+    /// The line in progress: running score and latest trick (zero and empty between lines).
+    pub line_points: f32,
+    pub line_trick: String,
 }
 impl Session {
     pub fn new(
@@ -287,6 +290,8 @@ impl Session {
             landed_lines: self.skater.scoring.landed_lines,
             landed_points: self.skater.scoring.landed_points,
             landed_trick: self.skater.scoring.landed_trick.clone(),
+            line_points: self.skater.scoring.live_line().0,
+            line_trick: self.skater.scoring.live_line().1.to_string(),
         }
     }
 }
