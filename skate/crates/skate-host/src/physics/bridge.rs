@@ -29,6 +29,8 @@ pub struct Session {
     input: ControllerInput,
     camera: CameraRuntime,
     markers: crate::session_marker::Runtime,
+    /// Stock gravity, kept while [`Session::set_gravity_scale`] changes it.
+    base_gravity: Option<skate_core::math::Vector3>,
 }
 pub struct Pose {
     pub root: Mat4,
@@ -86,6 +88,7 @@ impl Session {
             input: ControllerInput::default(),
             camera: CameraRuntime::load(root)?,
             markers: crate::session_marker::Runtime::load(root)?,
+            base_gravity: None,
         })
     }
     /// Rebuilds the world as the session's own collision plus `extra`
@@ -202,6 +205,26 @@ impl Session {
         };
         self.physics.board.bodies_mut().iter_mut().for_each(add);
         self.skater.skeleton.bodies_mut().iter_mut().for_each(add);
+        // In the air the rider follows a centre-of-mass trajectory the board is drawn to.
+        let air = &mut self.skater.air_state;
+        if air.use_centre_of_mass_velocity {
+            let v = &mut air.centre_of_mass_trajectory.velocity;
+            for (lane, d) in dv.iter().enumerate() {
+                v[lane] += d;
+            }
+        }
+    }
+    /// Scales gravity, the world's and the air trajectory's, from the next tick: `1` is stock.
+    pub fn set_gravity_scale(&mut self, scale: f32) {
+        let gravity = &mut self.physics.settings.step.simulation.gravity_acceleration;
+        let base = *self.base_gravity.get_or_insert(*gravity);
+        gravity.x = base.x * scale;
+        gravity.y = base.y * scale;
+        gravity.z = base.z * scale;
+        let air = &mut self.skater.air_state;
+        if air.use_centre_of_mass_velocity {
+            air.centre_of_mass_trajectory.acceleration[1] = super::air_phase::COM_ACCELERATION[1] * scale;
+        }
     }
     /// The deck's velocity (m/s) and forward axis, engine space.
     pub fn motion(&self) -> ([f32; 3], [f32; 3]) {

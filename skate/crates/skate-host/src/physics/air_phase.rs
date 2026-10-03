@@ -14,7 +14,7 @@ use skate_core::air::state::{
 
 ///Original initializer82F826B0/822F8B40. This COM trajectory acceleration is
 ///distinct from the world's separately supplied rigid-body gravity setting.
-const COM_ACCELERATION: [f32; 4] = [0.0, f32::from_bits(0xc11c_cccd), 0.0, 0.0];
+pub(super) const COM_ACCELERATION: [f32; 4] = [0.0, f32::from_bits(0xc11c_cccd), 0.0, 0.0];
 
 pub(super) fn enter(physics: &mut GamePhysics, skater: &mut SkaterRuntime) -> Result<(), String> {
     let frame = input::frame(skater);
