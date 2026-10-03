@@ -74,6 +74,10 @@ pub(crate) struct Runtime {
     pub new_trick: bool,
     pub modified_trick: bool,
     pub close_tricks: bool,
+    /// Landed (not bailed) lines so far: their count, summed points and the last one's trick.
+    pub landed_lines: u32,
+    pub landed_points: f64,
+    pub landed_trick: String,
 }
 impl Runtime {
     pub fn load(data: &Collections) -> Result<Self, String> {
@@ -110,6 +114,9 @@ impl Runtime {
             new_trick: false,
             modified_trick: false,
             close_tricks: false,
+            landed_lines: 0,
+            landed_points: 0.,
+            landed_trick: String::new(),
         })
     }
 
@@ -554,6 +561,11 @@ impl Runtime {
                 self.session
                     .publish_sequence(&self.data.session_rules(), 1., bailout, true);
             self.sequence_active = false;
+            if !bailout && self.sequence_score > 0. {
+                self.landed_lines = self.landed_lines.wrapping_add(1);
+                self.landed_points += f64::from(self.sequence_score);
+                self.landed_trick = self.trick_name.clone();
+            }
             // 82775328 -> 82774E88 closes only for ScoreModule reset/bail
             // output 14630 (82DA4010/82DA4238), not a banked landing.
             self.close_tricks = bailout;

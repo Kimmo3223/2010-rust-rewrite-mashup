@@ -38,6 +38,10 @@ pub struct Pose {
     pub velocity: Vec3,
     pub tick: u64,
     pub state: String,
+    /// Landed lines so far (count, summed points, last trick name), for progression.
+    pub landed_lines: u32,
+    pub landed_points: f64,
+    pub landed_trick: String,
 }
 impl Session {
     pub fn new(
@@ -188,6 +192,28 @@ impl Session {
             &mut self.camera,
         )
     }
+    /// Adds `dv` (m/s, engine space) to the board's and the rider's bodies: boosts layered over
+    /// the simulation by the host.
+    pub fn add_velocity(&mut self, dv: [f32; 3]) {
+        let add = |b: &mut skate_core::physics::assembly::BodySnapshot| {
+            b.rates.linear_velocity.x += dv[0];
+            b.rates.linear_velocity.y += dv[1];
+            b.rates.linear_velocity.z += dv[2];
+        };
+        self.physics.board.bodies_mut().iter_mut().for_each(add);
+        self.skater.skeleton.bodies_mut().iter_mut().for_each(add);
+    }
+    /// The deck's velocity (m/s) and forward axis, engine space.
+    pub fn motion(&self) -> ([f32; 3], [f32; 3]) {
+        let deck = skate_core::physics::board::BodyId::Deck.index();
+        let v = self.physics.board.bodies()[deck].rates.linear_velocity;
+        let forward = self.physics.board.part_transforms()[deck].basis.columns[2];
+        ([v.x, v.y, v.z], [forward[0], forward[1], forward[2]])
+    }
+    /// Whether the skater is in the air (not rolling, grinding or bailing).
+    pub fn airborne(&self) -> bool {
+        (200..300).contains(&(self.skater.player_state.current() as u32))
+    }
     /// Deterministic raw-packet entry point for playback/diagnostics.
     pub fn tick(&mut self, input: Controls) -> Result<(), String> {
         crate::input::sample(
@@ -226,6 +252,9 @@ impl Session {
             velocity: Vec3::new(v.x, v.y, v.z),
             tick: self.physics.ticks,
             state: format!("{:?}", self.skater.player_state.current()),
+            landed_lines: self.skater.scoring.landed_lines,
+            landed_points: self.skater.scoring.landed_points,
+            landed_trick: self.skater.scoring.landed_trick.clone(),
         }
     }
 }
