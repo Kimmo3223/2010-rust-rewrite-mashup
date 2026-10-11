@@ -437,4 +437,15 @@ fn native_float_mode() {
             std::arch::asm!("ldmxcsr [{}]", in(reg) &csr, options(nostack));
         }
     }
+    // AArch64 (Apple Silicon): FPCR.FZ flushes denormal inputs and results to zero.
+    #[cfg(target_arch = "aarch64")]
+    unsafe {
+        const FZ: u64 = 1 << 24;
+        let mut fpcr: u64;
+        std::arch::asm!("mrs {}, fpcr", out(reg) fpcr, options(nomem, nostack));
+        if fpcr & FZ == 0 {
+            fpcr |= FZ;
+            std::arch::asm!("msr fpcr, {}", in(reg) fpcr, options(nomem, nostack));
+        }
+    }
 }
