@@ -1,4 +1,4 @@
-//! Device transport: XInput on Windows, evdev on Linux. Raw signed
+//! Device transport: XInput on Windows, evdev on Linux, gilrs on macOS. Raw signed
 //! axes/trigger bytes reach the TU3 converter without Bevy/gilrs deadzones or
 //! normalized-axis reconstruction.
 use skate_core::input::xbox::XboxState;
@@ -14,6 +14,9 @@ use skate_core::input::xbox::XboxState;
     )
 ))]
 mod linux;
+#[path = "platform_macos.rs"]
+#[cfg(target_os = "macos")]
+mod macos;
 
 pub(crate) struct DevicePacket {
     pub number: u32,
@@ -28,6 +31,7 @@ pub(crate) enum DeviceError {
     Capabilities(u32),
     #[cfg(not(any(
         windows,
+        target_os = "macos",
         all(
             target_os = "linux",
             any(
@@ -171,8 +175,11 @@ pub(crate) fn poll_cached(
         )
     ))]
     return linux::poll(index, cache);
+    #[cfg(target_os = "macos")]
+    return macos::poll(index, cache);
     #[cfg(not(any(
         windows,
+        target_os = "macos",
         all(
             target_os = "linux",
             any(
