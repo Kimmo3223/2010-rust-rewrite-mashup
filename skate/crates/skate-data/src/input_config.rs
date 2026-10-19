@@ -1,7 +1,7 @@
 //! Compatibility check for the stock gameplay expressions specialized by
 //! skate-core's GameplayActions. This is not the full native expression VM.
 use crate::AssetError;
-use std::{collections::BTreeMap, fs, path::Path};
+use std::{collections::BTreeMap, path::Path};
 
 pub const STOCK_INPUT_PATH: &str = "private/stock/data/config/input.cfg";
 
@@ -10,7 +10,7 @@ pub struct StockGameplayConfig;
 impl StockGameplayConfig {
     pub fn load(asset_root: &Path) -> Result<Self, AssetError> {
         let path = asset_root.join(STOCK_INPUT_PATH);
-        let source = fs::read_to_string(&path)
+        let source = crate::vfs::read_to_string(&path)
             .map_err(|error| AssetError(format!("Cannot read {}: {error}", path.display())))?;
         Self::validate(&source)
             .map_err(|error| AssetError(format!("Input configuration {}: {error}", path.display())))

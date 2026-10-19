@@ -9,6 +9,9 @@ serde.workspace = true
 serde_json.workspace = true
 blake3 = "=1.8.7"
 half = "=2.7.1"
+
+# The UDP socket tuning (`socket`); the web has no UDP sockets.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 socket2 = "0.6"
 
 [dev-dependencies]

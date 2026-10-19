@@ -2,7 +2,7 @@
 //! separate core operations; this loader never repairs missing bone channels.
 use crate::animation_metadata::AnimationMetadata;
 use serde::Deserialize;
-use std::{collections::BTreeMap, fs, path::Path};
+use std::{collections::BTreeMap, path::Path};
 mod native;
 
 /// Scale xyz, quaternion xyzw, translation xyz; each component is an f32 word.
@@ -76,7 +76,7 @@ impl AnimationFrames {
         })
     }
     pub fn load(path: &Path, metadata: &AnimationMetadata) -> Result<Self, String> {
-        let text = fs::read_to_string(path)
+        let text = crate::vfs::read_to_string(path)
             .map_err(|error| format!("Cannot read {}: {error}", path.display()))?;
         Self::parse(&text, metadata).map_err(|error| format!("{}: {error}", path.display()))
     }

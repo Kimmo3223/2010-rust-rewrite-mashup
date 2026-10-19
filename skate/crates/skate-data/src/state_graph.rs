@@ -5,7 +5,7 @@
 //! Each attribute stores two strings, a float word and a boolean byte.
 //! Keep all three representations: parsing the string again loses stock data.
 use crate::AssetError;
-use std::{fs, path::Path};
+use std::{path::Path};
 
 pub mod attributes;
 pub mod binding;
@@ -38,7 +38,7 @@ pub struct StateGraph {
 
 impl StateGraph {
     pub fn load(path: &Path) -> Result<Self, AssetError> {
-        let bytes = fs::read(path)
+        let bytes = crate::vfs::read(path)
             .map_err(|e| AssetError(format!("Cannot read graph {}: {e}", path.display())))?;
         Self::decode(&bytes)
             .map_err(|e| AssetError(format!("Invalid graph {}: {e}", path.display())))

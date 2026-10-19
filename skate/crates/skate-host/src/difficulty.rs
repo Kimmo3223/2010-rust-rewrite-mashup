@@ -27,7 +27,7 @@ impl Difficulty {
         root.parent().unwrap_or(root).join("settings/gameplay.json")
     }
     pub fn load(root: &Path) -> Result<Self, String> {
-        match std::fs::read(Self::path(root)) {
+        match skate_data::vfs::read(Self::path(root)) {
             Ok(bytes) => serde_json::from_slice::<Saved>(&bytes).map(|s| s.difficulty)
                 .map_err(|e| format!("Invalid saved gameplay settings: {e}")),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(Self::default()),
@@ -36,8 +36,8 @@ impl Difficulty {
     }
     pub fn save(self, root: &Path) -> Result<(), String> {
         let path = Self::path(root);
-        std::fs::create_dir_all(path.parent().unwrap()).map_err(|e| e.to_string())?;
-        std::fs::write(path, serde_json::to_vec_pretty(&Saved { difficulty: self }).map_err(|e| e.to_string())?)
+        skate_data::vfs::create_dir_all(path.parent().unwrap()).map_err(|e| e.to_string())?;
+        skate_data::vfs::write(path, serde_json::to_vec_pretty(&Saved { difficulty: self }).map_err(|e| e.to_string())?)
             .map_err(|e| e.to_string())
     }
 }

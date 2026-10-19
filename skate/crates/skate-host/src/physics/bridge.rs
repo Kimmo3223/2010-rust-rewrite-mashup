@@ -62,7 +62,7 @@ impl Session {
     /// data) and authored grind splines, in the map's own coordinates.
     pub fn from_map(root: &Path, map: SkateMap) -> Result<Self, String> {
         native_float_mode();
-        let started = std::time::Instant::now();
+        let started = web_time::Instant::now();
         eprintln!("IW4L_SKATE_LOAD begin");
         skate_data::input_config::StockGameplayConfig::load(root).map_err(|e| e.to_string())?;
         let assets = skate_data::GameAssets::load(root).map_err(|e| e.to_string())?;

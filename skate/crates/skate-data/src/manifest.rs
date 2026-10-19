@@ -1,7 +1,6 @@
 use serde::Deserialize;
 use std::{
-    fmt, fs,
-    path::{Component, Path, PathBuf},
+    fmt, path::{Component, Path, PathBuf},
 };
 
 #[derive(Debug, Deserialize)]
@@ -26,7 +25,7 @@ impl std::error::Error for AssetError {}
 impl GameAssets {
     pub fn load(root: &Path) -> Result<Self, AssetError> {
         let file = root.join("private/game.json");
-        let json = fs::read_to_string(&file).map_err(|e| AssetError(format!("Cannot read {}: {e}. Run pipeline/Prepare-Assets.ps1 or select the correct --assets directory.", file.display())))?;
+        let json = crate::vfs::read_to_string(&file).map_err(|e| AssetError(format!("Cannot read {}: {e}. Run pipeline/Prepare-Assets.ps1 or select the correct --assets directory.", file.display())))?;
         let manifest = Self::parse(&json)?;
         for (kind, relative) in [
             ("Character scene", manifest.character_scene.as_str()),
@@ -34,7 +33,7 @@ impl GameAssets {
             ("MotionGraph", manifest.motion_graph.as_str()),
         ] {
             let path = root.join(relative);
-            if !path.is_file() {
+            if !crate::vfs::is_file(&path) {
                 return Err(AssetError(format!("{kind} missing: {}", path.display())));
             }
         }

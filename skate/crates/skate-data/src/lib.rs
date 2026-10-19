@@ -3,6 +3,7 @@
 mod manifest;
 pub use manifest::{AssetError, GameAssets};
 pub mod abin;
+pub mod vfs;
 pub mod animation_banks;
 pub mod animation_frames;
 pub mod animation_metadata;

@@ -1,7 +1,8 @@
 //! Little-endian SKATE01..15 reader. Layout follows the supplied
 //! SK8R15/Source/tools/blender_owned_map/SKATE_FORMAT.md and
 //! owned/world/src/owned_map_package.cpp. No geometry or physics is inferred.
-use std::{io::Read, path::Path, time::Instant};
+use std::{io::Read, path::Path};
+use web_time::Instant;
 mod texture_decode;
 mod storage_v15;
 
@@ -356,7 +357,7 @@ impl StoredBlock<'_> {
 impl SkateMap {
     pub fn load(path: &Path) -> Result<Self, String> {
         let started = Instant::now();
-        let data = std::fs::read(path).map_err(|e| format!("{}: {e}", path.display()))?;
+        let data = crate::vfs::read(path).map_err(|e| format!("{}: {e}", path.display()))?;
         let disk = started.elapsed();
         let parse_started = Instant::now();
         let map = Self::parse(&data).map_err(|e| format!("{}: {e}", path.display()))?;

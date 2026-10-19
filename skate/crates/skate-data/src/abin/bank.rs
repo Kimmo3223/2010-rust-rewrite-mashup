@@ -1,6 +1,6 @@
 //! Ordered bank indexing and lossless header decoding. Codec math is separate.
 use super::*;
-use std::{collections::BTreeMap, fs, path::Path, sync::Arc};
+use std::{collections::BTreeMap, path::Path, sync::Arc};
 
 pub struct Bank {
     bytes: Arc<[u8]>,
@@ -16,7 +16,7 @@ pub struct Bank {
 impl Bank {
     pub fn load(path: &Path) -> Result<Self> {
         let bytes =
-            fs::read(path).map_err(|e| Error::new(0, format!("{}: {e}", path.display())))?;
+            crate::vfs::read(path).map_err(|e| Error::new(0, format!("{}: {e}", path.display())))?;
         Self::parse(bytes)
     }
     pub fn parse(bytes: Vec<u8>) -> Result<Self> {

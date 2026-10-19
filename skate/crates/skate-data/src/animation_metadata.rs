@@ -2,7 +2,7 @@
 //! Clock/attribute evaluation belongs to core/game; this loader preserves bits
 //! and record order and rejects malformed or ambiguous source data.
 use serde::Deserialize;
-use std::{collections::BTreeMap, fs, path::Path};
+use std::{collections::BTreeMap, path::Path};
 mod native;
 mod blend_space;
 pub use blend_space::{BlendSpaceMetadata, BlendSimplexMetadata};
@@ -113,7 +113,7 @@ pub struct AnimationMetadata {
 
 impl AnimationMetadata {
     pub fn load(path: &Path) -> Result<Self, String> {
-        let text = fs::read_to_string(path)
+        let text = crate::vfs::read_to_string(path)
             .map_err(|e| format!("Cannot read animation metadata {}: {e}", path.display()))?;
         Self::parse(&text).map_err(|e| format!("{}: {e}", path.display()))
     }

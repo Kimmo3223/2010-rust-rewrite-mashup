@@ -4,6 +4,7 @@ use std::time::{Duration, Instant};
 mod codec;
 pub mod lobby;
 pub mod blob;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod socket;
 pub mod directory;
 pub mod packed;
